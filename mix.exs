@@ -9,7 +9,7 @@ defmodule BambooMailjet.Mixfile do
       build_embedded: Mix.env == :prod,
       start_permanent: Mix.env == :prod,
       description: "A Mailjet adapter for Bamboo",
-      package: package,
+      package: package(),
       deps: deps()
     ]
   end

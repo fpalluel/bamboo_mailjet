@@ -17,9 +17,9 @@ defmodule Bamboo.MailjetAdapterTest do
     plug :dispatch
 
     def start_server(parent) do
-      Agent.start_link(fn -> HashDict.new end, name: __MODULE__)
-      Agent.update(__MODULE__, &HashDict.put(&1, :parent, parent))
-      port = get_free_port
+      Agent.start_link(fn -> %{} end, name: __MODULE__)
+      Agent.update(__MODULE__, &Map.put(&1, :parent, parent))
+      port = get_free_port()
       Application.put_env(:bamboo, :mailjet_base_uri, "http://localhost:#{port}")
       Plug.Adapters.Cowboy.http __MODULE__, [], port: port, ref: __MODULE__
     end
@@ -43,14 +43,14 @@ defmodule Bamboo.MailjetAdapterTest do
     end
 
     defp send_to_parent(conn) do
-      parent = Agent.get(__MODULE__, fn(set) -> HashDict.get(set, :parent) end)
+      parent = Agent.get(__MODULE__, fn(set) -> Map.get(set, :parent) end)
       send parent, {:fake_mailjet, conn}
       conn
     end
   end
 
   setup do
-    FakeMailjet.start_server(self)
+    FakeMailjet.start_server(self())
 
     on_exit fn ->
       FakeMailjet.shutdown
@@ -76,7 +76,7 @@ defmodule Bamboo.MailjetAdapterTest do
   end
 
   test "deliver/2 sends the to the right url" do
-    new_email |> MailjetAdapter.deliver(@config)
+    new_email() |> MailjetAdapter.deliver(@config)
 
     assert_receive {:fake_mailjet, %{request_path: request_path}}
 
