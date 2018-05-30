@@ -114,6 +114,9 @@ defmodule Bamboo.MailjetAdapter do
     |> put_html_body(email)
     |> put_text_body(email)
     |> put_recipients(email)
+    |> put_template_id(email)
+    |> put_template_language(email)
+    |> put_vars(email)
   end
 
   defp put_from(body, %Email{from: address}) when is_binary(address), do: Map.put(body, :fromemail, address)
@@ -155,6 +158,15 @@ defmodule Bamboo.MailjetAdapter do
 
   defp put_text_body(body, %Email{text_body: nil}), do: body
   defp put_text_body(body, %Email{text_body: text_body}), do: Map.put(body, "text-part", text_body)
+
+  defp put_template_id(body, %Email{private: %{mj_templateid: id}}), do: Map.put(body, "mj-templateid", id)
+  defp put_template_id(body, _email), do: body
+
+  defp put_template_language(body, %Email{private: %{mj_templatelanguage: active}}), do: Map.put(body, "mj-templatelanguage", active)
+  defp put_template_language(body, _email), do: body
+
+  defp put_vars(body, %Email{private: %{mj_vars: vars}}), do: Map.put(body, "vars", vars)
+  defp put_vars(body, _email), do: body
 
   defp recipients(new_recipients) do
     new_recipients

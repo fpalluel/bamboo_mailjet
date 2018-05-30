@@ -2,6 +2,7 @@ defmodule Bamboo.MailjetAdapterTest do
   use ExUnit.Case
   alias Bamboo.Email
   alias Bamboo.MailjetAdapter
+  alias Bamboo.MailjetHelper
 
   @config %{adapter: MailjetAdapter, api_key: "123_abc", api_private_key: "321_cba"}
   @config_with_no_api_key %{adapter: MailjetAdapter, api_key: nil, api_private_key: "321_cba"}
@@ -134,6 +135,35 @@ defmodule Bamboo.MailjetAdapterTest do
     assert params["cc"] == nil
     assert params["bcc"] == nil
 
+  end
+
+  test "deliver/2 sends template id and template language" do
+    new_email(
+      from: {"From", "from@foo.com"},
+      subject: "My Subject",
+    )
+    |> MailjetHelper.template("42")
+    |> MailjetHelper.template_language(true)
+    |> MailjetAdapter.deliver(@config)
+
+
+    assert_receive {:fake_mailjet, %{params: params}}
+    assert params["mj-templateid"] == "42"
+    assert params["mj-templatelanguage"] == true
+  end
+
+  test "deliver/2 sends variables" do
+    new_email(
+      from: {"From", "from@foo.com"},
+      subject: "My Subject",
+    )
+    |> MailjetHelper.put_var("foo1", "bar1")
+    |> MailjetHelper.put_var("foo2", "bar2")
+    |> MailjetAdapter.deliver(@config)
+
+
+    assert_receive {:fake_mailjet, %{params: params}}
+    assert params["vars"] == %{"foo1" => "bar1", "foo2" => "bar2"}
   end
 
   test "raises if the response is not a success" do
