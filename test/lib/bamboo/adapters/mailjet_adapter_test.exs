@@ -22,7 +22,7 @@ defmodule Bamboo.MailjetAdapterTest do
       Agent.update(__MODULE__, &Map.put(&1, :parent, parent))
       port = get_free_port()
       Application.put_env(:bamboo, :mailjet_base_uri, "http://localhost:#{port}")
-      Plug.Adapters.Cowboy.http __MODULE__, [], port: port, ref: __MODULE__
+      Plug.Adapters.Cowboy2.http __MODULE__, [], port: port, ref: __MODULE__
     end
 
     defp get_free_port do
@@ -33,7 +33,7 @@ defmodule Bamboo.MailjetAdapterTest do
     end
 
     def shutdown do
-      Plug.Adapters.Cowboy.shutdown __MODULE__
+      Plug.Adapters.Cowboy2.shutdown __MODULE__
     end
 
     post "/send" do
@@ -89,7 +89,7 @@ defmodule Bamboo.MailjetAdapterTest do
       from: {"From", "from@foo.com"},
       subject: "My Subject",
       text_body: "TEXT BODY",
-      html_body: "HTML BODY",
+      html_body: "HTML BODY"
     )
     |> Email.put_header("Reply-To", "reply@foo.com")
 
@@ -109,7 +109,7 @@ defmodule Bamboo.MailjetAdapterTest do
     email = new_email(
       to: [{"foo1", "foo1@bar.com"}, {nil, "foo2@bar.com"}, "foo3@bar.com"],
       cc: [{"foo1", "foo1@bar.com"}, {nil, "foo2@bar.com"}, "foo3@bar.com"],
-      bcc: [{"foo1", "foo1@bar.com"}, {nil, "foo2@bar.com"}, "foo3@bar.com"],
+      bcc: [{"foo1", "foo1@bar.com"}, {nil, "foo2@bar.com"}, "foo3@bar.com"]
     )
 
     email |> MailjetAdapter.deliver(@config)
@@ -124,7 +124,7 @@ defmodule Bamboo.MailjetAdapterTest do
 
   test "deliver/2 correctly formats Mailjet recipients" do
     email = new_email(
-      bcc: [{"user1", "foo1@bar.com"}, {nil, "foo2@bar.com"}, "foo3@bar.com"],
+      bcc: [{"user1", "foo1@bar.com"}, {nil, "foo2@bar.com"}, "foo3@bar.com"]
     )
 
     email |> MailjetAdapter.deliver(@config)
@@ -140,7 +140,7 @@ defmodule Bamboo.MailjetAdapterTest do
   test "deliver/2 sends template id and template language" do
     new_email(
       from: {"From", "from@foo.com"},
-      subject: "My Subject",
+      subject: "My Subject"
     )
     |> MailjetHelper.template("42")
     |> MailjetHelper.template_language(true)
@@ -155,7 +155,7 @@ defmodule Bamboo.MailjetAdapterTest do
   test "deliver/2 sends variables" do
     new_email(
       from: {"From", "from@foo.com"},
-      subject: "My Subject",
+      subject: "My Subject"
     )
     |> MailjetHelper.put_var("foo1", "bar1")
     |> MailjetHelper.put_var("foo2", "bar2")
