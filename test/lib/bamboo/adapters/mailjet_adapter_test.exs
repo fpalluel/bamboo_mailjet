@@ -86,12 +86,12 @@ defmodule Bamboo.MailjetAdapterTest do
 
   test "deliver/2 sends from, html and text body, subject, and headers" do
     email = new_email(
-      from: {"From", "from@foo.com"},
-      subject: "My Subject",
-      text_body: "TEXT BODY",
-      html_body: "HTML BODY",
-    )
-    |> Email.put_header("Reply-To", "reply@foo.com")
+        from: {"From", "from@foo.com"},
+        subject: "My Subject",
+        text_body: "TEXT BODY",
+        html_body: "HTML BODY",
+      )
+      |> Email.put_header("Reply-To", "reply@foo.com")
 
     email |> MailjetAdapter.deliver(@config)
 
@@ -107,10 +107,10 @@ defmodule Bamboo.MailjetAdapterTest do
 
   test "deliver/2 correctly formats TO,CC and BCC" do
     email = new_email(
-      to: [{"foo1", "foo1@bar.com"}, {nil, "foo2@bar.com"}, "foo3@bar.com"],
-      cc: [{"foo1", "foo1@bar.com"}, {nil, "foo2@bar.com"}, "foo3@bar.com"],
-      bcc: [{"foo1", "foo1@bar.com"}, {nil, "foo2@bar.com"}, "foo3@bar.com"],
-    )
+        to: [{"foo1", "foo1@bar.com"}, {nil, "foo2@bar.com"}, "foo3@bar.com"],
+        cc: [{"foo1", "foo1@bar.com"}, {nil, "foo2@bar.com"}, "foo3@bar.com"],
+        bcc: [{"foo1", "foo1@bar.com"}, {nil, "foo2@bar.com"}, "foo3@bar.com"],
+      )
 
     email |> MailjetAdapter.deliver(@config)
 
@@ -125,7 +125,7 @@ defmodule Bamboo.MailjetAdapterTest do
   test "deliver/2 correctly formats Mailjet recipients" do
     email = new_email(
       bcc: [{"user1", "foo1@bar.com"}, {nil, "foo2@bar.com"}, "foo3@bar.com"],
-    )
+      )
 
     email |> MailjetAdapter.deliver(@config)
 
@@ -164,6 +164,30 @@ defmodule Bamboo.MailjetAdapterTest do
 
     assert_receive {:fake_mailjet, %{params: params}}
     assert params["vars"] == %{"foo1" => "bar1", "foo2" => "bar2"}
+  end
+
+  test "deliver/2 sends with custom id" do
+    new_email(
+      from: {"From", "from@foo.com"},
+      subject: "My Subject"
+    )
+    |> MailjetHelper.put_custom_id("customId1")
+    |> MailjetAdapter.deliver(@config)
+
+    assert_receive {:fake_mailjet, %{params: params}}
+    assert params["Mj-CustomID"] == "customId1"
+  end
+
+  test "deliver/2 sends with event payload" do
+    new_email(
+      from: {"From", "from@foo.com"},
+      subject: "My Subject"
+    )
+    |> MailjetHelper.put_event_payload("customEventPayLoad")
+    |> MailjetAdapter.deliver(@config)
+
+    assert_receive {:fake_mailjet, %{params: params}}
+    assert params["Mj-EventPayLoad"] == "customEventPayLoad"
   end
 
   test "raises if the response is not a success" do

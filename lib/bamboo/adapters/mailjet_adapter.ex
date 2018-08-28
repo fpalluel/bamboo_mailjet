@@ -117,6 +117,8 @@ defmodule Bamboo.MailjetAdapter do
     |> put_template_id(email)
     |> put_template_language(email)
     |> put_vars(email)
+    |> put_custom_id(email)
+    |> put_event_payload(email)
   end
 
   defp put_from(body, %Email{from: address}) when is_binary(address), do: Map.put(body, :fromemail, address)
@@ -168,6 +170,9 @@ defmodule Bamboo.MailjetAdapter do
   defp put_vars(body, %Email{private: %{mj_vars: vars}}), do: Map.put(body, "vars", vars)
   defp put_vars(body, _email), do: body
 
+  defp put_custom_id(body, %Email{private: %{mj_custom_id: custom_id}}), do: Map.put(body, "Mj-CustomID", custom_id)
+  defp put_custom_id(body, _email), do: body
+
   defp recipients(new_recipients) do
     new_recipients
     |> Enum.reduce([], fn(recipient, recipients) ->
@@ -182,8 +187,8 @@ defmodule Bamboo.MailjetAdapter do
   defp addresses(new_addresses) do
     new_addresses
     |> Enum.reduce([], fn(address, addresses) ->
-        addresses ++ get_address_output(address)
-      end)
+      addresses ++ get_address_output(address)
+    end)
     |> Enum.join(",")
   end
 
