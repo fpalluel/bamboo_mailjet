@@ -190,8 +190,8 @@ defmodule Bamboo.MailjetAdapter do
   defp addresses(new_addresses) do
     new_addresses
     |> Enum.reduce([], fn(address, addresses) ->
-      addresses ++ get_address_output(address)
-    end)
+        addresses ++ get_address_output(address)
+      end)
     |> Enum.join(",")
   end
 
