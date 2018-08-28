@@ -172,6 +172,9 @@ defmodule Bamboo.MailjetAdapter do
 
   defp put_custom_id(body, %Email{private: %{mj_custom_id: custom_id}}), do: Map.put(body, "Mj-CustomID", custom_id)
   defp put_custom_id(body, _email), do: body
+  
+  defp put_event_payload(body, %Email{private: %{mj_event_payload: event_payload}}), do: Map.put(body, "Mj-EventPayLoad", event_payload)
+  defp put_event_payload(body, _email), do: body
 
   defp recipients(new_recipients) do
     new_recipients

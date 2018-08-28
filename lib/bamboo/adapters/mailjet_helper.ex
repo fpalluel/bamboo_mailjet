@@ -57,4 +57,13 @@ defmodule Bamboo.MailjetHelper do
   def put_custom_id(email, value) do
     Email.put_private(email, :mj_custom_id, value)
   end
+
+  @doc """
+  Add a event payload to the email
+
+  this can be used to add an event payload to the email, which will be returned in the mailjet event callback api
+  """
+  def put_event_payload(email, value) do
+    Email.put_private(email, :mj_event_payload, value)
+  end
 end
