@@ -14,7 +14,8 @@ defmodule Bamboo.MailjetAdapterTest do
   defmodule FakeMailjet do
     use Plug.Router
 
-    plug(Plug.Parsers,
+    plug(
+      Plug.Parsers,
       parsers: [:urlencoded, :multipart, :json],
       pass: ["*/*"],
       json_decoder: Poison
