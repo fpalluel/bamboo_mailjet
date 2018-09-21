@@ -30,11 +30,11 @@ defmodule BambooMailjet.Mixfile do
 
   defp deps do
     [
-      {:bamboo, "~> 0.8.0"},
-      {:credo, "~> 0.5", only: [:dev, :test]},
-      {:cowboy, "~> 1.0", only: [:test, :dev]},
-      {:ex_doc, "~> 0.14", only: :dev},
-      {:inch_ex, ">= 0.0.0", only: :dev}
+      {:bamboo, "~> 1.0.0"},
+      {:credo, "~> 0.10.0", only: [:dev, :test]},
+      {:cowboy, "~> 2.4.0", only: [:test, :dev]},
+      {:ex_doc, "~> 0.19", only: :dev},
+      {:inch_ex, "~> 1.0.0", only: :dev}
     ]
   end
 end
