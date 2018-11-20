@@ -86,6 +86,9 @@ defmodule Bamboo.MailjetAdapter do
     end
   end
 
+  @doc false
+  def supports_attachments?, do: true
+
   defp get_key(config, key) do
     case Map.get(config, key) do
       nil -> raise_key_error(config, key)
@@ -122,6 +125,7 @@ defmodule Bamboo.MailjetAdapter do
     |> put_vars(email)
     |> put_custom_id(email)
     |> put_event_payload(email)
+    |> put_attachments(email)
   end
 
   defp put_from(body, %Email{from: address}) when is_binary(address),
@@ -198,6 +202,23 @@ defmodule Bamboo.MailjetAdapter do
     do: Map.put(body, "Mj-EventPayLoad", event_payload)
 
   defp put_event_payload(body, _email), do: body
+
+  defp put_attachments(body, %Email{attachments: []}), do: body
+
+  defp put_attachments(body, %Email{attachments: attachments}) do
+    transformed =
+      attachments
+      |> Enum.reverse()
+      |> Enum.map(fn attachment ->
+        %{
+          filename: attachment.filename,
+          "content-type": attachment.content_type,
+          content: Base.encode64(attachment.data)
+        }
+      end)
+
+    Map.put(body, :attachments, transformed)
+  end
 
   defp recipients(new_recipients) do
     new_recipients
