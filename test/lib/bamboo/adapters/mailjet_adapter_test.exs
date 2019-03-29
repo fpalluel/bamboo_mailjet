@@ -14,7 +14,8 @@ defmodule Bamboo.MailjetAdapterTest do
   defmodule FakeMailjet do
     use Plug.Router
 
-    plug(Plug.Parsers,
+    plug(
+      Plug.Parsers,
       parsers: [:urlencoded, :multipart, :json],
       pass: ["*/*"],
       json_decoder: Poison
@@ -177,6 +178,30 @@ defmodule Bamboo.MailjetAdapterTest do
 
     assert_receive {:fake_mailjet, %{params: params}}
     assert params["vars"] == %{"foo1" => "bar1", "foo2" => "bar2"}
+  end
+
+  test "deliver/2 sends with custom id" do
+    new_email(
+      from: {"From", "from@foo.com"},
+      subject: "My Subject"
+    )
+    |> MailjetHelper.put_custom_id("customId1")
+    |> MailjetAdapter.deliver(@config)
+
+    assert_receive {:fake_mailjet, %{params: params}}
+    assert params["Mj-CustomID"] == "customId1"
+  end
+
+  test "deliver/2 sends with event payload" do
+    new_email(
+      from: {"From", "from@foo.com"},
+      subject: "My Subject"
+    )
+    |> MailjetHelper.put_event_payload("customEventPayLoad")
+    |> MailjetAdapter.deliver(@config)
+
+    assert_receive {:fake_mailjet, %{params: params}}
+    assert params["Mj-EventPayLoad"] == "customEventPayLoad"
   end
 
   test "raises if the response is not a success" do

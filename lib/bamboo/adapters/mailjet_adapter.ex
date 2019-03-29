@@ -120,6 +120,8 @@ defmodule Bamboo.MailjetAdapter do
     |> put_template_id(email)
     |> put_template_language(email)
     |> put_vars(email)
+    |> put_custom_id(email)
+    |> put_event_payload(email)
   end
 
   defp put_from(body, %Email{from: address}) when is_binary(address),
@@ -186,6 +188,16 @@ defmodule Bamboo.MailjetAdapter do
 
   defp put_vars(body, %Email{private: %{mj_vars: vars}}), do: Map.put(body, "vars", vars)
   defp put_vars(body, _email), do: body
+
+  defp put_custom_id(body, %Email{private: %{mj_custom_id: custom_id}}),
+    do: Map.put(body, "Mj-CustomID", custom_id)
+
+  defp put_custom_id(body, _email), do: body
+
+  defp put_event_payload(body, %Email{private: %{mj_event_payload: event_payload}}),
+    do: Map.put(body, "Mj-EventPayLoad", event_payload)
+
+  defp put_event_payload(body, _email), do: body
 
   defp recipients(new_recipients) do
     new_recipients
