@@ -62,7 +62,7 @@ defmodule Bamboo.MailjetAdapter do
   def deliver(email, config) do
     api_key = get_key(config, :api_key)
     api_private_key = get_key(config, :api_private_key)
-    body = email |> to_mailjet_body |> Poison.encode!()
+    body = email |> to_mailjet_body |> Bamboo.json_library().encode!()
     url = [base_uri(), @send_message_path]
 
     case :hackney.post(url, gen_headers(api_key, api_private_key), body, [:with_body]) do
