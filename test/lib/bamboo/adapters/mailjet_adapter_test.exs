@@ -18,7 +18,7 @@ defmodule Bamboo.MailjetAdapterTest do
       Plug.Parsers,
       parsers: [:urlencoded, :multipart, :json],
       pass: ["*/*"],
-      json_decoder: Poison
+      json_decoder: Jason
     )
 
     plug(:match)
@@ -29,7 +29,7 @@ defmodule Bamboo.MailjetAdapterTest do
       Agent.update(__MODULE__, &Map.put(&1, :parent, parent))
       port = get_free_port()
       Application.put_env(:bamboo, :mailjet_base_uri, "http://localhost:#{port}")
-      Plug.Adapters.Cowboy2.http(__MODULE__, [], port: port, ref: __MODULE__)
+      Plug.Cowboy.http(__MODULE__, [], port: port, ref: __MODULE__)
     end
 
     defp get_free_port do
@@ -40,7 +40,7 @@ defmodule Bamboo.MailjetAdapterTest do
     end
 
     def shutdown do
-      Plug.Adapters.Cowboy2.shutdown(__MODULE__)
+      Plug.Cowboy.shutdown(__MODULE__)
     end
 
     post "/send" do
