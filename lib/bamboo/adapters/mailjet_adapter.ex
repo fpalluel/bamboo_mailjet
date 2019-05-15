@@ -164,6 +164,8 @@ defmodule Bamboo.MailjetAdapter do
     |> put_bcc(email)
   end
 
+  defp put_subject(body, %Email{subject: nil}), do: body
+
   defp put_subject(body, %Email{subject: subject}), do: Map.put(body, :subject, subject)
 
   defp put_html_body(body, %Email{html_body: nil}), do: body
