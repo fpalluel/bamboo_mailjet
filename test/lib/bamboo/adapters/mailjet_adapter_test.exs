@@ -91,7 +91,7 @@ defmodule Bamboo.MailjetAdapterTest do
     assert request_path == "/send"
   end
 
-  test "deliver/2 sends from, html and text body, subject, and headers" do
+  test "deliver/2 sends from, html and text body, subject, headers and attachment" do
     email =
       new_email(
         from: {"From", "from@foo.com"},
@@ -100,6 +100,7 @@ defmodule Bamboo.MailjetAdapterTest do
         html_body: "HTML BODY"
       )
       |> Email.put_header("Reply-To", "reply@foo.com")
+      |> Email.put_attachment(Path.join(__DIR__, "../../../support/attachment.txt"))
 
     email |> MailjetAdapter.deliver(@config)
 
@@ -116,6 +117,14 @@ defmodule Bamboo.MailjetAdapterTest do
              {"authorization",
               "Basic " <> Base.encode64("#{@config[:api_key]}:#{@config[:api_private_key]}")}
            )
+
+    assert params["attachments"] == [
+             %{
+               "content-type" => "text/plain",
+               "filename" => "attachment.txt",
+               "content" => "VGVzdCBBdHRhY2htZW50Cg=="
+             }
+           ]
   end
 
   test "deliver/2 correctly formats TO,CC and BCC" do
@@ -210,6 +219,14 @@ defmodule Bamboo.MailjetAdapterTest do
     assert_raise Bamboo.MailjetAdapter.ApiError, fn ->
       email |> MailjetAdapter.deliver(@config)
     end
+  end
+
+  test "deliver/2 omits attachments key if no attachments" do
+    email = new_email()
+    email |> MailjetAdapter.deliver(@config)
+
+    assert_receive {:fake_mailjet, %{params: params}}
+    refute Map.has_key?(params, "attachments")
   end
 
   defp new_email(attrs \\ []) do
