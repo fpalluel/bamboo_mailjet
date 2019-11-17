@@ -126,6 +126,7 @@ defmodule Bamboo.MailjetAdapter do
     |> put_custom_id(email)
     |> put_event_payload(email)
     |> put_attachments(email)
+    |> put_monitoring_category(email)
   end
 
   defp put_from(body, %Email{from: address}) when is_binary(address),
@@ -204,6 +205,11 @@ defmodule Bamboo.MailjetAdapter do
     do: Map.put(body, "Mj-EventPayLoad", event_payload)
 
   defp put_event_payload(body, _email), do: body
+
+  defp put_monitoring_category(body, %Email{private: %{mj_monitoring_category: category}}),
+    do: Map.put(body, "Mj-MonitoringCategory", category)
+
+  defp put_monitoring_category(body, _), do: body
 
   defp put_attachments(body, %Email{attachments: []}), do: body
 
