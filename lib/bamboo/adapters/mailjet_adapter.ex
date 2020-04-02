@@ -18,17 +18,9 @@ defmodule Bamboo.MailjetAdapter do
         use Bamboo.Mailer, otp_app: :my_app
       end
 
-   Note: Mailjet provides a "recipients" feature. From the documentation: The recipients
-   listed in **Recipients** will each receive a separate message without showing all the
-   other recipients.
-   To make use of it in Bamboo, when creating an email, set the "BCC" field only,
-   leaving the TO and CC field empty.
-
-   If TO and/or CC field are set, this adapter will generate the TO, CC and BCC
-   fields in the "traditional" way.
   """
 
-  @default_base_uri "https://api.mailjet.com/v3"
+  @default_base_uri "https://api.mailjet.com/v3.1"
   @send_message_path "/send"
   @behaviour Bamboo.Adapter
 
@@ -119,7 +111,9 @@ defmodule Bamboo.MailjetAdapter do
     |> put_subject(email)
     |> put_html_body(email)
     |> put_text_body(email)
-    |> put_recipients(email)
+    |> put_to(email)
+    |> put_cc(email)
+    |> put_bcc(email)
     |> put_template_id(email)
     |> put_template_language(email)
     |> put_vars(email)
@@ -128,80 +122,75 @@ defmodule Bamboo.MailjetAdapter do
     |> put_attachments(email)
   end
 
+  defp prepare_recipients(recipients),
+    do: Enum.map(recipients, &prepare_recipient(&1))
+
+  defp prepare_recipient({name, address}),
+    do: %{"Name" => name, "Email" => address}
+
   defp put_from(body, %Email{from: address}) when is_binary(address),
-    do: Map.put(body, :fromemail, address)
+    do: Map.put(body, "From", %{"Email" => address})
 
   defp put_from(body, %Email{from: {name, address}}) when name in [nil, "", ''],
-    do: Map.put(body, :fromemail, address)
+    do: Map.put(body, "From", %{"Email" => address})
 
   defp put_from(body, %Email{from: {name, address}}) do
-    body
-    |> Map.put(:fromemail, address)
-    |> Map.put(:fromname, name)
+    Map.put(body, "From", prepare_recipient({name, address}))
   end
 
   defp put_to(body, %Email{to: []}), do: body
 
   defp put_to(body, %Email{to: to}) do
-    Map.put(body, :to, to |> addresses)
+    Map.put(body, "To", prepare_recipients(to))
   end
 
   defp put_cc(body, %Email{cc: []}), do: body
 
-  defp put_cc(body, %Email{cc: cc}) do
-    Map.put(body, :cc, cc |> addresses)
-  end
+  defp put_cc(body, %Email{cc: cc}),
+    do: Map.put(body, "Cc", prepare_recipients(cc))
 
   defp put_bcc(body, %Email{bcc: []}), do: body
 
-  defp put_bcc(body, %Email{bcc: bcc}) do
-    Map.put(body, :bcc, bcc |> addresses)
-  end
-
-  defp put_recipients(body, %{to: [], cc: [], bcc: bcc}),
-    do: Map.put(body, :recipients, bcc |> recipients)
-
-  defp put_recipients(body, email) do
-    body
-    |> put_to(email)
-    |> put_cc(email)
-    |> put_bcc(email)
-  end
+  defp put_bcc(body, %Email{bcc: bcc}),
+    do: Map.put(body, "Bcc", prepare_recipients(bcc))
 
   defp put_subject(body, %Email{subject: nil}), do: body
 
-  defp put_subject(body, %Email{subject: subject}), do: Map.put(body, :subject, subject)
+  defp put_subject(body, %Email{subject: subject}),
+    do: Map.put(body, "Subject", subject)
 
   defp put_html_body(body, %Email{html_body: nil}), do: body
 
   defp put_html_body(body, %Email{html_body: html_body}),
-    do: Map.put(body, "html-part", html_body)
+    do: Map.put(body, "HTMLPart", html_body)
 
   defp put_text_body(body, %Email{text_body: nil}), do: body
 
   defp put_text_body(body, %Email{text_body: text_body}),
-    do: Map.put(body, "text-part", text_body)
+    do: Map.put(body, "TextPart", text_body)
 
   defp put_template_id(body, %Email{private: %{mj_templateid: id}}),
-    do: Map.put(body, "mj-templateid", id)
+    do: Map.put(body, "TemplateID", id)
 
   defp put_template_id(body, _email), do: body
 
   defp put_template_language(body, %Email{private: %{mj_templatelanguage: active}}),
-    do: Map.put(body, "mj-templatelanguage", active)
+    do: Map.put(body, "TemplateLanguage", active)
 
   defp put_template_language(body, _email), do: body
 
-  defp put_vars(body, %Email{private: %{mj_vars: vars}}), do: Map.put(body, "vars", vars)
+  defp put_vars(body, %Email{private: %{mj_vars: vars}}),
+    do: Map.put(body, "Variables", vars)
+
   defp put_vars(body, _email), do: body
 
   defp put_custom_id(body, %Email{private: %{mj_custom_id: custom_id}}),
-    do: Map.put(body, "Mj-CustomID", custom_id)
+    do: Map.put(body, "CustomID", custom_id)
 
   defp put_custom_id(body, _email), do: body
 
   defp put_event_payload(body, %Email{private: %{mj_event_payload: event_payload}}),
-    do: Map.put(body, "Mj-EventPayLoad", event_payload)
+    do: Map.put(body, "EventPayload", event_payload)
 
   defp put_event_payload(body, _email), do: body
 
@@ -213,37 +202,14 @@ defmodule Bamboo.MailjetAdapter do
       |> Enum.reverse()
       |> Enum.map(fn attachment ->
         %{
-          filename: attachment.filename,
-          "content-type": attachment.content_type,
-          content: Base.encode64(attachment.data)
+          "Filename" => attachment.filename,
+          "ContentType" => attachment.content_type,
+          "Base64Content" => Base.encode64(attachment.data)
         }
       end)
 
-    Map.put(body, :attachments, transformed)
+    Map.put(body, "Attachments", transformed)
   end
-
-  defp recipients(new_recipients) do
-    new_recipients
-    |> Enum.reduce([], fn recipient, recipients ->
-      recipients ++ get_recipient_output(recipient)
-    end)
-  end
-
-  defp get_recipient_output(recipient) when is_binary(recipient), do: [%{email: recipient}]
-  defp get_recipient_output({name, email}) when name in [nil, '', ""], do: [%{email: email}]
-  defp get_recipient_output({name, email}), do: [%{name: name, email: email}]
-
-  defp addresses(new_addresses) do
-    new_addresses
-    |> Enum.reduce([], fn address, addresses ->
-      addresses ++ get_address_output(address)
-    end)
-    |> Enum.join(",")
-  end
-
-  defp get_address_output(address) when is_binary(address), do: [address]
-  defp get_address_output({name, email}) when name in [nil, '', ""], do: [email]
-  defp get_address_output({name, email}), do: [name <> " <" <> email <> ">"]
 
   defp base_uri do
     Application.get_env(:bamboo, :mailjet_base_uri) || @default_base_uri
