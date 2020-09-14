@@ -57,6 +57,16 @@ defmodule Bamboo.MailjetAdapterTest do
     end
   end
 
+  defmodule CustomUser do
+    defstruct first_name: "", last_name: "", primary_email: "", fav_food: "pizza"
+  end
+
+  defimpl Bamboo.Formatter, for: Bamboo.MailjetAdapterTest.CustomUser do
+    def format_email_address(user, %{type: t}) do
+      {"#{user.first_name} #{user.last_name} (#{t})", user.primary_email}
+    end
+  end
+
   setup do
     FakeMailjet.start_server(self())
 
@@ -144,6 +154,23 @@ defmodule Bamboo.MailjetAdapterTest do
     assert params["bcc"] == "foo1 <foo1@bar.com>,foo2@bar.com,foo3@bar.com"
   end
 
+  test "deliver/2 correctly formats To, CC and BBC using Formatter" do
+    email =
+      new_email(
+        to: [%CustomUser{first_name: "Foo", last_name: "Bar", primary_email: "foo1@bar.com"}],
+        cc: [%CustomUser{first_name: "Foo", last_name: "Bar", primary_email: "foo1@bar.com"}],
+        bcc: [%CustomUser{first_name: "Foo", last_name: "Bar", primary_email: "foo1@bar.com"}],
+      )
+
+    email |> MailjetAdapter.deliver(@config)
+
+    assert_receive {:fake_mailjet, %{params: params}}
+
+    assert params["to"] == "Foo Bar (to) <foo1@bar.com>"
+    assert params["cc"] == "Foo Bar (cc) <foo1@bar.com>"
+    assert params["bcc"] == "Foo Bar (bcc) <foo1@bar.com>"
+  end
+
   test "deliver/2 correctly formats Mailjet recipients" do
     email = new_email(bcc: [{"user1", "foo1@bar.com"}, {nil, "foo2@bar.com"}, "foo3@bar.com"])
 
@@ -161,6 +188,26 @@ defmodule Bamboo.MailjetAdapterTest do
     assert params["cc"] == nil
     assert params["bcc"] == nil
   end
+
+  test "deliver/2 correctly formats Mailjet recipients with vars" do
+    users = [
+      %CustomUser{first_name: "Foo", last_name: "Bar", primary_email: "foo1@bar.com", fav_food: "pasta"},
+      %CustomUser{first_name: "Baz", last_name: "Bak", primary_email: "baz2@bar.com"}
+    ]
+
+    email = new_email(bcc: users)
+    |> MailjetHelper.put_recipient_vars(Enum.map(users, fn u -> %{"food" => u.fav_food} end))
+
+    email |> MailjetAdapter.deliver(@config)
+
+    assert_receive {:fake_mailjet, %{params: params}}
+
+    assert params["recipients"] == [
+      %{"email" => "foo1@bar.com", "name" => "Foo Bar (bcc)", "Vars" => %{"food" => "pasta"}},
+      %{"email" => "baz2@bar.com", "name" => "Baz Bak (bcc)", "Vars" => %{"food" => "pizza"}}
+    ]
+  end
+
 
   test "deliver/2 sends template id and template language" do
     new_email(

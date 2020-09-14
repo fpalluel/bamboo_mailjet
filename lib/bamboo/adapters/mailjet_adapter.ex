@@ -32,7 +32,7 @@ defmodule Bamboo.MailjetAdapter do
   @send_message_path "/send"
   @behaviour Bamboo.Adapter
 
-  alias Bamboo.Email
+  alias Bamboo.{Email, Formatter}
 
   defmodule ApiError do
     defexception [:message]
@@ -120,6 +120,7 @@ defmodule Bamboo.MailjetAdapter do
     |> put_html_body(email)
     |> put_text_body(email)
     |> put_recipients(email)
+    |> put_recipient_vars(email)
     |> put_template_id(email)
     |> put_template_language(email)
     |> put_vars(email)
@@ -166,6 +167,24 @@ defmodule Bamboo.MailjetAdapter do
     |> put_to(email)
     |> put_cc(email)
     |> put_bcc(email)
+  end
+
+  defp put_recipient_vars(
+    %{recipients: recipients} = body,
+    %{
+      to: [], cc: [], bcc: bcc,
+      private: %{mj_recipient_vars: vars}
+    }
+  ) do
+    r = recipients
+    |> Enum.zip(vars)
+    |> Enum.map(fn {rcpt, v} -> Map.put(rcpt, "Vars", v) end)
+
+    %{body | recipients: r}
+  end
+
+  defp put_recipient_vars(body, _eml) do
+    body
   end
 
   defp put_subject(body, %Email{subject: nil}), do: body
