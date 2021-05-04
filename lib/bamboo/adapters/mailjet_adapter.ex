@@ -65,7 +65,8 @@ defmodule Bamboo.MailjetAdapter do
     body = email |> to_mailjet_body |> Bamboo.json_library().encode!()
     url = [base_uri(), @send_message_path]
 
-    case :hackney.post(url, gen_headers(api_key, api_private_key), body, [:with_body]) do
+    hackney_overrides = Map.get(config, :hackney_overrides, [])
+    case :hackney.post(url, gen_headers(api_key, api_private_key), body, [:with_body] ++ hackney_overrides) do
       {:ok, status, _headers, response} when status > 299 ->
         raise(ApiError, %{params: body, response: response})
 
