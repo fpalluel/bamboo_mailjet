@@ -66,4 +66,13 @@ defmodule Bamboo.MailjetHelper do
   def put_event_payload(email, value) do
     Email.put_private(email, :mj_event_payload, value)
   end
+
+  @doc """
+  Add a monitoring category to the email, allowing to trigger alerts if the delivery fails.
+  See the documentation : https://dev.mailjet.com/email/guides/send-api-V3/#real-time-monitoring
+  """
+  @spec put_monitoring_category(Email.t(), String.t()) :: Email.t()
+  def put_monitoring_category(email, category) do
+    Email.put_private(email, :mj_monitoring_category, category)
+  end
 end

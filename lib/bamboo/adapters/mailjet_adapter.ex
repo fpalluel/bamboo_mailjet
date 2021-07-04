@@ -65,7 +65,8 @@ defmodule Bamboo.MailjetAdapter do
     body = email |> to_mailjet_body |> Bamboo.json_library().encode!()
     url = [base_uri(), @send_message_path]
 
-    case :hackney.post(url, gen_headers(api_key, api_private_key), body, [:with_body]) do
+    hackney_overrides = Map.get(config, :hackney_overrides, [])
+    case :hackney.post(url, gen_headers(api_key, api_private_key), body, [:with_body] ++ hackney_overrides) do
       {:ok, status, _headers, response} when status > 299 ->
         raise(ApiError, %{params: body, response: response})
 
@@ -126,6 +127,7 @@ defmodule Bamboo.MailjetAdapter do
     |> put_custom_id(email)
     |> put_event_payload(email)
     |> put_attachments(email)
+    |> put_monitoring_category(email)
   end
 
   defp put_from(body, %Email{from: address}) when is_binary(address),
@@ -204,6 +206,11 @@ defmodule Bamboo.MailjetAdapter do
     do: Map.put(body, "Mj-EventPayLoad", event_payload)
 
   defp put_event_payload(body, _email), do: body
+
+  defp put_monitoring_category(body, %Email{private: %{mj_monitoring_category: category}}),
+    do: Map.put(body, "Mj-MonitoringCategory", category)
+
+  defp put_monitoring_category(body, _), do: body
 
   defp put_attachments(body, %Email{attachments: []}), do: body
 

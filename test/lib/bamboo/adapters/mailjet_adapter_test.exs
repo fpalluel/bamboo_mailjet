@@ -213,6 +213,18 @@ defmodule Bamboo.MailjetAdapterTest do
     assert params["Mj-EventPayLoad"] == "customEventPayLoad"
   end
 
+  test "deliver/2 sends with monitoring category" do
+    new_email(
+      from: {"From", "from@foo.com"},
+      subject: "My Subject"
+    )
+    |> MailjetHelper.put_monitoring_category("my_monitoring_category")
+    |> MailjetAdapter.deliver(@config)
+
+    assert_receive {:fake_mailjet, %{params: params}}
+    assert params["Mj-MonitoringCategory"] == "my_monitoring_category"
+  end
+
   test "raises if the response is not a success" do
     email = new_email(from: "INVALID_EMAIL")
 
