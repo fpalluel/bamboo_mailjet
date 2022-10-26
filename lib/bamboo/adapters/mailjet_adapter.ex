@@ -60,29 +60,37 @@ defmodule Bamboo.MailjetAdapter do
   end
 
   def deliver(email, config) do
-    api_key = get_key(config, :api_key)
-    api_private_key = get_key(config, :api_private_key)
     body = email |> to_mailjet_body |> Bamboo.json_library().encode!()
     url = [base_uri(), @send_message_path]
 
-    case :hackney.post(url, gen_headers(api_key, api_private_key), body, [:with_body]) do
-      {:ok, status, _headers, response} when status > 299 ->
-        raise(ApiError, %{params: body, response: response})
+    with {:ok, api_key} <- get_key(config, :api_key),
+         {:ok, api_private_key} <- get_key(config, :api_private_key),
+         {:ok, status, headers, response} when status in [200, 201, 204] <-
+           :hackney.post(url, gen_headers(api_key, api_private_key), body, [:with_body]) do
+      {:ok, %{status_code: status, headers: headers, body: response}}
+    else
+      {:error, {:invalid_key, message}} ->
+        {:error, message}
 
-      {:ok, status, headers, response} ->
-        %{status_code: status, headers: headers, body: response}
+      {:ok, status, _headers, response} when status > 299 ->
+        {:error, ApiError.exception(%{params: body, response: response})}
 
       {:error, reason} ->
-        raise(ApiError, %{message: inspect(reason)})
+        {:error, ApiError.exception(%{message: inspect(reason)})}
     end
   end
 
   @doc false
   def handle_config(config) do
     cond do
-      config[:api_key] in [nil, "", ''] -> raise_key_error(config, :api_key)
-      config[:api_private_key] in [nil, "", ''] -> raise_key_error(config, :api_private_key)
-      true -> config
+      config[:api_key] in [nil, "", ''] ->
+        {:error, build_key_error(config, :api_key)}
+
+      config[:api_private_key] in [nil, "", ''] ->
+        {:error, build_key_error(config, :api_private_key)}
+
+      true ->
+        config
     end
   end
 
@@ -91,13 +99,13 @@ defmodule Bamboo.MailjetAdapter do
 
   defp get_key(config, key) do
     case Map.get(config, key) do
-      nil -> raise_key_error(config, key)
-      key -> key
+      value when value in [nil, "", ''] -> {:error, {:invalid_key, build_key_error(config, key)}}
+      value -> {:ok, value}
     end
   end
 
-  defp raise_key_error(config, key) do
-    raise ArgumentError, """
+  defp build_key_error(config, key) do
+    """
     There was no #{key} set for the Mailjet adapter.
 
     * Here are the config options that were passed in:
