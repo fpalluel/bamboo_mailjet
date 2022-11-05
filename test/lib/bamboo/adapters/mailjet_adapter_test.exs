@@ -114,8 +114,7 @@ defmodule Bamboo.MailjetAdapterTest do
 
     assert Enum.member?(
              headers,
-             {"authorization",
-              "Basic " <> Base.encode64("#{@config[:api_key]}:#{@config[:api_private_key]}")}
+             {"authorization", "Basic " <> Base.encode64("#{@config[:api_key]}:#{@config[:api_private_key]}")}
            )
 
     assert params["attachments"] == [
@@ -213,12 +212,12 @@ defmodule Bamboo.MailjetAdapterTest do
     assert params["Mj-EventPayLoad"] == "customEventPayLoad"
   end
 
-  test "raises if the response is not a success" do
+  test "returns an error if the response is not a success" do
     email = new_email(from: "INVALID_EMAIL")
 
-    assert_raise Bamboo.MailjetAdapter.ApiError, fn ->
-      email |> MailjetAdapter.deliver(@config)
-    end
+    {:error, %Bamboo.MailjetAdapter.ApiError{} = error} = MailjetAdapter.deliver(email, @config)
+
+    assert error.message =~ "INVALID_EMAIL"
   end
 
   test "deliver/2 omits attachments key if no attachments" do

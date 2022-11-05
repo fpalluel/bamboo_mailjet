@@ -60,30 +60,28 @@ defmodule Bamboo.MailjetAdapter do
   end
 
   def deliver(email, config) do
-    api_key = get_key(config, :api_key)
-    api_private_key = get_key(config, :api_private_key)
+    config = handle_config(config)
     body = email |> to_mailjet_body |> Bamboo.json_library().encode!()
     url = [base_uri(), @send_message_path]
 
-    case :hackney.post(url, gen_headers(api_key, api_private_key), body, [:with_body]) do
+    case :hackney.post(url, gen_headers(config), body, [:with_body]) do
       {:ok, status, _headers, response} when status > 299 ->
-        raise(ApiError, %{params: body, response: response})
+        {:error, ApiError.exception(%{params: body, response: response})}
 
       {:ok, status, headers, response} ->
-        %{status_code: status, headers: headers, body: response}
+        {:ok, %{status_code: status, headers: headers, body: response}}
 
       {:error, reason} ->
-        raise(ApiError, %{message: inspect(reason)})
+        {:error, ApiError.exception(%{message: inspect(reason)})}
     end
   end
 
   @doc false
   def handle_config(config) do
-    cond do
-      config[:api_key] in [nil, "", ''] -> raise_key_error(config, :api_key)
-      config[:api_private_key] in [nil, "", ''] -> raise_key_error(config, :api_private_key)
-      true -> config
-    end
+    config
+    |> Map.put(:api_key, get_key(config, :api_key))
+    |> Map.put(:api_private_key, get_key(config, :api_private_key))
+    |> Map.put_new(:base_uri, base_uri())
   end
 
   @doc false
@@ -91,8 +89,8 @@ defmodule Bamboo.MailjetAdapter do
 
   defp get_key(config, key) do
     case Map.get(config, key) do
-      nil -> raise_key_error(config, key)
-      key -> key
+      value when value in [nil, "", ''] -> raise_key_error(config, key)
+      value -> value
     end
   end
 
@@ -106,10 +104,10 @@ defmodule Bamboo.MailjetAdapter do
     """
   end
 
-  defp gen_headers(api_key, api_private_key) do
+  defp gen_headers(config) do
     [
       {"Content-Type", "application/json"},
-      {"Authorization", "Basic " <> Base.encode64("#{api_key}:#{api_private_key}")}
+      {"Authorization", "Basic " <> Base.encode64("#{config.api_key}:#{config.api_private_key}")}
     ]
   end
 
