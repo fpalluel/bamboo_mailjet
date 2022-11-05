@@ -60,20 +60,16 @@ defmodule Bamboo.MailjetAdapter do
   end
 
   def deliver(email, config) do
+    config = handle_config(config)
     body = email |> to_mailjet_body |> Bamboo.json_library().encode!()
     url = [base_uri(), @send_message_path]
 
-    with {:ok, api_key} <- get_key(config, :api_key),
-         {:ok, api_private_key} <- get_key(config, :api_private_key),
-         {:ok, status, headers, response} when status in [200, 201, 204] <-
-           :hackney.post(url, gen_headers(api_key, api_private_key), body, [:with_body]) do
-      {:ok, %{status_code: status, headers: headers, body: response}}
-    else
-      {:error, {:invalid_key, message}} ->
-        {:error, message}
-
+    case :hackney.post(url, gen_headers(config), body, [:with_body]) do
       {:ok, status, _headers, response} when status > 299 ->
         {:error, ApiError.exception(%{params: body, response: response})}
+
+      {:ok, status, headers, response} ->
+        {:ok, %{status_code: status, headers: headers, body: response}}
 
       {:error, reason} ->
         {:error, ApiError.exception(%{message: inspect(reason)})}
@@ -82,16 +78,10 @@ defmodule Bamboo.MailjetAdapter do
 
   @doc false
   def handle_config(config) do
-    cond do
-      config[:api_key] in [nil, "", ''] ->
-        {:error, build_key_error(config, :api_key)}
-
-      config[:api_private_key] in [nil, "", ''] ->
-        {:error, build_key_error(config, :api_private_key)}
-
-      true ->
-        config
-    end
+    config
+    |> Map.put(:api_key, get_key(config, :api_key))
+    |> Map.put(:api_private_key, get_key(config, :api_private_key))
+    |> Map.put_new(:base_uri, base_uri())
   end
 
   @doc false
@@ -99,13 +89,13 @@ defmodule Bamboo.MailjetAdapter do
 
   defp get_key(config, key) do
     case Map.get(config, key) do
-      value when value in [nil, "", ''] -> {:error, {:invalid_key, build_key_error(config, key)}}
-      value -> {:ok, value}
+      value when value in [nil, "", ''] -> raise_key_error(config, key)
+      value -> value
     end
   end
 
-  defp build_key_error(config, key) do
-    """
+  defp raise_key_error(config, key) do
+    raise ArgumentError, """
     There was no #{key} set for the Mailjet adapter.
 
     * Here are the config options that were passed in:
@@ -114,10 +104,10 @@ defmodule Bamboo.MailjetAdapter do
     """
   end
 
-  defp gen_headers(api_key, api_private_key) do
+  defp gen_headers(config) do
     [
       {"Content-Type", "application/json"},
-      {"Authorization", "Basic " <> Base.encode64("#{api_key}:#{api_private_key}")}
+      {"Authorization", "Basic " <> Base.encode64("#{config.api_key}:#{config.api_private_key}")}
     ]
   end
 

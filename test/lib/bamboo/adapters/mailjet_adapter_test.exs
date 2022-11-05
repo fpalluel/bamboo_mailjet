@@ -68,20 +68,19 @@ defmodule Bamboo.MailjetAdapterTest do
   end
 
   test "raises if the api key is nil" do
-    assert {:error, message} = new_email(from: "foo@bar.com") |> MailjetAdapter.deliver(@config_with_no_api_key)
+    assert_raise ArgumentError, ~r/no api_key set/, fn ->
+      new_email(from: "foo@bar.com") |> MailjetAdapter.deliver(@config_with_no_api_key)
+    end
 
-    assert message =~ ~r/no api_key set/
-
-    assert {:error, message} = MailjetAdapter.handle_config(%{})
-    assert message =~ ~r/no api_key set/
+    assert_raise ArgumentError, ~r/no api_key set/, fn ->
+      MailjetAdapter.handle_config(%{})
+    end
   end
 
   test "raises if the api private key is nil" do
-    assert {:error, message} =
-             new_email(from: "foo@bar.com")
-             |> MailjetAdapter.deliver(@config_with_no_api_private_key)
-
-    assert message =~ ~r/no api_private_key set/
+    assert_raise ArgumentError, ~r/no api_private_key set/, fn ->
+      new_email(from: "foo@bar.com") |> MailjetAdapter.deliver(@config_with_no_api_private_key)
+    end
   end
 
   test "deliver/2 sends the to the right url" do
